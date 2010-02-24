@@ -1,0 +1,162 @@
+<project name='Stomp' default='compile-test' basedir='.'>
+  <property name='build' location='build'/>
+  <property name='src' location='java'/>
+  <property name='dest' location='classes'/>
+  <property name='libs' location='lib/junit.jar'/>
+  <property name='release' value='0.4.1'/>
+  <property name='debug' value='No'/>
+
+
+  <target name='compile-java-dist' depends='info,compile-java'/>
+
+
+  <target name='compile-test'>
+    <mkdir dir="${dest}"/>
+    <javac srcdir='${src}' destdir='${dest}' debug='on'
+      classpath='${libs}'/>
+  </target>
+
+
+  <target name='compile-java'>
+    <property file='info.txt'/>
+    <property name='debug' value='true'/>
+    <filter token='release' value='${release}'/>
+    <filter token='revision' value='${Revision}'/>
+    <mkdir dir='build'/>
+    <copy todir='build' filtering='true'>
+      <fileset dir='java' excludes='**/.svn/**'/>
+    </copy>
+    <mkdir dir='${dest}'/>
+    <javac srcdir='build' destdir='${dest}' debug='true'
+      excludes='Test.java'/>
+    <delete dir='build'/>
+  </target>
+
+
+  <target name='clean'>
+    <delete dir='classes'/>
+    <delete dir='build'/>
+    <delete file='info.txt'/>
+    <delete>
+      <fileset dir='.'>
+        <include name='gozirra-*.tar.gz'/>
+        <include name='gozirra-*.jar'/>
+        <include name='gozirra-server-*.jar'/>
+        <include name='gozirra-client-*.jar'/>
+        <include name='web.tgz'/>
+        <include name='dist.xml'/>
+      </fileset>
+    </delete>
+  </target>
+
+
+  <target name='all-jar' depends='compile-java-dist'>
+    <delete file='gozirra-${release}.jar'/>
+    <jar destfile='gozirra-${release}.jar' basedir='${dest}' 
+      excludes='Test*.class'/>
+  </target>
+
+
+  <target name='server-only-jar' depends='compile-java-dist'>
+    <!-- Application -->
+    <manifest file='manifest'>
+      <attribute name='Main-Class' value='net.ser1.stomp.Server'/>
+    </manifest>
+    <jar destfile='gozirra-server-${release}.jar' manifest='manifest'>
+      <fileset dir='${dest}'>
+        <include name='net/ser1/stomp/Message.class'/>
+        <include name='net/ser1/stomp/Server.class'/>
+        <include name='net/ser1/stomp/MessageReceiver.class'/>
+        <include name='net/ser1/stomp/Stomp.class'/>
+        <include name='net/ser1/stomp/Receiver.class'/>
+        <include name='net/ser1/stomp/Server$ConnectionListener.class'/>
+        <include name='net/ser1/stomp/IntraVMClient.class'/>
+        <include name='net/ser1/stomp/Server$SocketHandler.class'/>
+        <include name='net/ser1/stomp/Transmitter.class'/>
+        <include name='net/ser1/stomp/Queue.class'/>
+        <include name='net/ser1/stomp/Listener.class'/>
+        <include name='net/ser1/stomp/AbstractListener.class'/>
+        <include name='net/ser1/stomp/FileQueue.class'/>
+        <include name='net/ser1/stomp/Command.class'/>
+        <include name='net/ser1/stomp/Version.class'/>
+      </fileset>
+    </jar>
+    <delete file='manifest'/>
+  </target>
+
+
+  <target name='client-only-jar' depends='compile-java-dist'>
+    <jar destfile='gozirra-client-${release}.jar'>
+      <fileset dir='${dest}'>
+        <include name='net/ser1/stomp/Message.class'/>
+        <include name='net/ser1/stomp/MessageReceiver.class'/>
+        <include name='net/ser1/stomp/Stomp.class'/>
+        <include name='net/ser1/stomp/Receiver.class'/>
+        <include name='net/ser1/stomp/Transmitter.class'/>
+        <include name='net/ser1/stomp/Client.class'/>
+        <include name='net/ser1/stomp/Listener.class'/>
+        <include name='net/ser1/stomp/AbstractListener.class'/>
+        <include name='net/ser1/stomp/Command.class'/>
+        <include name='net/ser1/stomp/Version.class'/>
+      </fileset>
+    </jar>
+  </target>
+
+
+  <target name='source-tarball' depends='info'>
+    <property file='info.txt'/>
+    <filter token='release' value='${release}'/>
+    <filter token='revision' value='${Revision}'/>
+    <mkdir dir='dist'/>
+    <mkdir dir='dist/gozirra-${release}'/>
+    <copy todir='dist/gozirra-${release}' filtering='true'>
+      <fileset dir='.' includes='java/**,README,build.xml,info.txt' 
+        excludes='**/.svn/**'/>
+    </copy>
+    <tar tarfile='gozirra.tar' basedir='dist'/>
+    <gzip zipfile='gozirra-${release}.tar.gz' src='gozirra.tar'/>
+    <delete>
+      <fileset dir='.' includes='gozirra.tar'/>
+    </delete>
+    <delete dir='dist'/>
+  </target>
+
+
+  <target name='web'>
+    <property file='info.txt'/>
+    <filter token='release' value='${release}'/>
+    <filter token='revision' value='${Revision}'/>
+    <mkdir dir='dist'/>
+    <copy todir='dist' filtering='true'>
+      <fileset dir='doc' includes='index.html'/>
+      <fileset dir='doc' includes='dist.xml'/>
+    </copy>
+    <copy todir='.' file='doc/dist.xml' filtering='true'/>
+    <tar tarfile='web.tar' basedir='dist'/>
+    <gzip zipfile='web.tgz' src='web.tar'/>
+    <delete> <fileset dir='.' includes='web.tar'/> </delete>
+    <delete dir='dist'/>
+  </target>
+
+
+  <target name='test'>
+    <junit printsummary="yes" haltonfailure="yes">
+      <classpath>
+        <pathelement location='${dest}'/>
+      </classpath>
+      <test name='Test'/>
+    </junit>
+  </target>
+
+
+  <target name='build-dist' 
+    depends='info,all-jar,server-only-jar,client-only-jar,source-tarball,web'/>
+
+
+  <target name='info'>
+    <exec executable='svn' output='info.txt'>
+      <arg line='info'/>
+    </exec>
+    <replace file='info.txt' token=': ' value='='/>
+  </target>
+</project>
