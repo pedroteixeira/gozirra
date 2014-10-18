@@ -57,10 +57,15 @@ public class Client extends Stomp implements MessageReceiver {
         header.put("login", login);
         header.put("passcode", pass);
         transmit(Command.CONNECT, header, null);
+        // Busy loop bail out
+        int x=0;
         try {
             String error = null;
             while (!isConnected() && ((error = nextError()) == null)) {
                 Thread.sleep(100);
+                if (x++ > 20) {
+                    throw new LoginException("Did not connect in time!");
+                }
             }
             if (error != null) throw new LoginException(error);
         } catch (InterruptedException e) {
